@@ -14,3 +14,10 @@ export const conditionType = {
     sort: 'sort',
     time: 'time'
 } as const;
+
+export const likeOrcollect = {
+    like: 'like',
+    unlike: 'unlike',
+    collect: 'collect',
+    uncollect: 'uncollect'
+} as const

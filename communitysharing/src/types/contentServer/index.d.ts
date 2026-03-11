@@ -1,3 +1,31 @@
+interface likeOrCollect {
+    contentId?:string,
+    userId?:string
+}
+
+interface UserStautscontent {
+    contentId: string,
+    like: boolean,
+    collect: boolean
+}
+
+interface resParams {
+    success: string,
+    message?: string,
+    errorCode?: string
+}
+
+interface UserStautscontentReq extends resParams {
+    data: UserStautscontent
+}
+
+interface contentCount {
+    contentId: string,
+    likeTotal: number,
+	collectTotal: number,
+	commentTotal: numbers
+}   
+
 interface contentList {
     contentId: string;
     cover?: string;
@@ -23,6 +51,13 @@ interface responseData {
     totalCount: number;
     pageSize: number;
     totalPage: number;
+}
+
+interface resOnlyCountData {
+    success: boolean,
+    data: contentCount,
+    errorCode?: string;
+    message?: string;
 }
 
 interface contentListData extends responseData {
@@ -74,3 +109,11 @@ type getContentListbyChannel = (channelId:number,pageNo:number) => Promise<conte
 type getSearchContentList = (params: searchParams) => Promise<contentListData>;
 
 type getcontentDetail = (params: contentDetailreq) => Promise<resDetailData>;
+
+type getContentCount = (contentId: string) => Promise<resOnlyCountData>;
+
+type getUserStatuscontent = (contentId: string) => Promise<UserStautscontentReq>;
+
+type toLikeOrCollect = (contentIdORCollect: string) => Promise<resParams>;
+
+type reBuildContent = (contentId: string, creatorId: string) => Promise<resParams>;

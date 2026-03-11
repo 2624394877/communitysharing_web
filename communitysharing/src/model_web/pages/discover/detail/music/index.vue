@@ -199,10 +199,11 @@ const handleMouseUp = () => {
   }
 }
 
-watch(()=>videoUrl.value,(newValue => {
+watch(()=>videoUrl.value,((newValue, oldValue) => {
+  if(!oldValue) return;
   if (!newValue || !audioRef.value) return
   pause()
-  // console.log(newValue);
+  console.log(newValue);
   if(newValue != '') nextTick(()=>{
     play()
   })
