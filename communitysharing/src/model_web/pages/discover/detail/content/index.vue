@@ -14,8 +14,9 @@ import {
   ReBuildContent
 } from "@/core/network/service/content"
 
-import { likeOrcollect } from "@/types/enum"
-import type { LikeOrCollect } from "@/types/enum/enumType"
+import { likeOrcollect, followUnfollow } from "@/types/enum"
+import { type FollowUnfollow, type LikeOrCollect } from "@/types/enum/enumType"
+import { following, unfollowing } from "@/core/network/service/user"
 
 /* props */
 const props = defineProps<{
@@ -35,6 +36,7 @@ const count = ref<contentCount>({
 
 const islike = ref(false)
 const iscollect = ref(false)
+const isfollowing = ref(false)
 
 /* ---------------- 工具函数 ---------------- */
 
@@ -154,6 +156,26 @@ const tolike = async (contentId: string, type: LikeOrCollect) => {
   }
 }
 
+const tofollowing = async(creatorId: string, type: FollowUnfollow) => {
+  try {
+    let res;
+    switch(type) {
+      case followUnfollow.following:
+        console.log(`关注 ${creatorId}`)
+        res = await following(creatorId)
+        if(res.success) isfollowing.value = true
+        break
+      case followUnfollow.unfollowing:
+        console.log(`取消关注 ${creatorId}`)
+        res = await unfollowing(creatorId)
+        if(res.success) isfollowing.value = false
+        break
+    }
+  } catch(e) {
+    notifyError()
+  }
+}
+
 /* ---------------- 交互 ---------------- */
 
 const like = () => tolike(count.value.contentId, likeOrcollect.like)
@@ -170,9 +192,8 @@ const toPersonHome = (id: string) => {
   console.log(`查看 ${id} 主页`)
 }
 
-const following = (id: string) => {
-  console.log(`关注 ${id}`)
-}
+const follow = (creatorId: string) => tofollowing(creatorId, followUnfollow.following)
+const unfollow = (creatorId: string) => tofollowing(creatorId, followUnfollow.unfollowing)
 
 /* ---------------- 初始化 ---------------- */
 
@@ -197,7 +218,7 @@ watch(
                 <img :src="detail?.avatar ?? avator" width="60px" height="60px">
                 <h3>{{ detail?.creatorName }}</h3>
             </span>
-            <span class="follow" @click="following(detail?.creatorId ?? '')">关注</span>
+            <span class="follow" @click=" isfollowing? unfollow(detail?.creatorId ?? '') : follow(detail?.creatorId ?? '')">{{ isfollowing? '已关注': '关注' }}</span>
         </div>
         <h2 class="title">{{ detail?.title }}</h2>
         <h4 class="topic"><a># {{ detail?.topicName }}</a></h4>

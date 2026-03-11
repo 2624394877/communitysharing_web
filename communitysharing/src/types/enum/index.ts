@@ -21,3 +21,8 @@ export const likeOrcollect = {
     collect: 'collect',
     uncollect: 'uncollect'
 } as const
+
+export const followUnfollow = {
+    following: 'following',
+    unfollowing: 'unfollowing'
+} as const
