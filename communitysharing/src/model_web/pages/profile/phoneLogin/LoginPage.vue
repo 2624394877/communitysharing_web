@@ -6,6 +6,7 @@ import { useAuthStore } from "@/store/auth";
 import { loginType } from "@/types/enum";
 import type { LoginType } from "@/types/enum/enumType";
 import { wsService } from "@/core/service/websocket";
+import { useRouter } from "vue-router";
 const auth = useAuthStore();
 const agree = ref(false); // 是否同意协议
 const userLoginInfo:Ref<LoginParams> = ref({
@@ -17,6 +18,7 @@ const emit = defineEmits(['sendData'])
 // ---------- 发送验证码
 const count = ref(120);
 const arrived = ref(false);
+const router = useRouter()
 const countTimer = () => {
     if (count.value <= 0) {
         count.value = 120;
@@ -82,6 +84,7 @@ const login = async() => {
                 localStorage.setItem('token',res.data)
                 auth.setIsLogin(true); // 设置登录状态到pinia
                 wsService.connect(localStorage.getItem('token') || ''); // 连接WebSocket
+                router.replace('/discover')
             }else {
                 ElNotification.error({
                     title: '失败',

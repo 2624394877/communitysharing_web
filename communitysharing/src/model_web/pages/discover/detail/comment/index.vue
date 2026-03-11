@@ -193,7 +193,7 @@ watch(
             <div class="comment-divider">
                 <span>共 {{ commentTotal }} 条评论</span>
             </div>
-            <div class="comment" v-for="item in comments" :key="item.commentId">
+            <div class="comment" v-for="item in comments" :key="item.commentId"  v-loading="loading" :data="comments">
                 <div class="avator"><img :src="item?.avatar" width="40px" height="40px"></div>
                 <div class="comment-content">
                     <div class="txt">

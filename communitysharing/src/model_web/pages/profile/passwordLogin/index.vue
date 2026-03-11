@@ -6,6 +6,7 @@ import type { LoginType } from "@/types/enum/enumType";
 import { Login, getLoginUserInfo } from "@/core/network/service/auth";
 import { ElNotification } from 'element-plus'
 import { wsService } from "@/core/service/websocket";
+import { useRouter } from "vue-router";
 const auth = useAuthStore();
 const password = ref<LoginParams>({
     phone: '',
@@ -13,6 +14,7 @@ const password = ref<LoginParams>({
     type: '2' as const
 })
 const emit = defineEmits(['sendData'])
+const router = useRouter()
 // 选择登录方式
 const logintype = (type: LoginType) => {
     auth.setStartLogin(type)
@@ -51,6 +53,7 @@ const toLogin = async() => {
             localStorage.setItem('token',res.data);
             auth.setIsLogin(true);
             wsService.connect(localStorage.getItem('token') || '');
+            router.replace('/discover')
         } else {
             ElNotification.error({
                 title: '登录失败',

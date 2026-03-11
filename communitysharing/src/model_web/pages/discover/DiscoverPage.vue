@@ -166,9 +166,11 @@ onMounted(() => {
         <div class="top_nav" ref="scrollRef"  @mousedown="startDrag" @mousemove="onDrag" @mouseup="stopDrag" @mouseleave="stopDrag">
             <div class="cannel" :class="{ active: navTab === nav.id }" v-for="nav in navTabs" :key="nav.id" @click="selectTab(nav.id,$event)">{{ nav.name }}</div>
         </div>
-        <el-scrollbar class="content_body" @end-reached="loadMore" :distance="150">
-            <show v-model="contentList" :hasMore="hasMore" :empty="empty"></show>
-        </el-scrollbar>
+        <div class="content_body" v-loading="loading" :data="contentList">
+          <el-scrollbar @end-reached="loadMore" :distance="150">
+              <show v-model="contentList" :hasMore="hasMore" :empty="empty"></show>
+          </el-scrollbar>
+        </div>
     </div>
 </template>
 

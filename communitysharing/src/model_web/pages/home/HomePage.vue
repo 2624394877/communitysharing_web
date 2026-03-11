@@ -141,8 +141,6 @@ watch(
 
         if (val) {
             initUserInfo();
-
-            router.replace('/discover')
         }
     },
     { immediate: true }
