@@ -1,0 +1,35 @@
+@import "./normalize.css";
+/* :root表示文档根元素，全局属性，都可以使用var()来引用*/
+:root {
+    /* --example表示带有值的自定义属性 */
+    --color-text: #666;
+    --color-high-text:#03b4fb;
+    --color-tint:#03b5fbfe;
+    --color-background:#FFFFFF;
+    --font--size:14px;
+    --line-height:1.5; 
+}
+/* 重置样式 */
+*,
+*::before,*::after{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+body{
+    user-select:none  /*禁止用户选中文件或图片 */;
+    background: var(--color-background);
+    color: var(--color-text);
+    width: 100vw; /*vw是视口单位，是指相对于视口的宽度 比如浏览器宽度为1920px,则1vw=1920px/100=19.2px*/
+    /* height: 100vh; */
+}
+a {
+    color: var(--color-text);
+    text-decoration: none;
+}
+.left{
+    float: left;
+}
+.right{
+    float: right;
+}

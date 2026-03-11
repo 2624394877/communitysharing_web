@@ -1,0 +1,27 @@
+@import url("assets/baseCss/base.css");
+@import url("assets/baseCss/normalize.css");
+
+* {
+    box-sizing: border-box;
+}
+
+/* 音量进度条 */
+.volume-dropdown .el-dropdown-menu .item {
+  justify-content: center !important;
+}
+
+
+:deep(.el-dropdown-selfdefine),
+:deep(.el-dropdown-selfdefine:focus),
+:deep(.el-dropdown-selfdefine:focus-visible) {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.el-dialog__header.show-close {
+    padding: 0 !important;
+}
+
+ul {
+    list-style: none;
+}
