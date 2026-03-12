@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from "vue"
+import { ref, watch,onMounted } from "vue"
 import { useRoute } from "vue-router"
 
 import avator from "@/assets/resource/imges/avator.png"
@@ -78,10 +78,15 @@ const getContentCountOnly = async (contentId: string) => {
       notifyError(res.message)
       return
     }
-
-    count.value = res.data
-    // console.log(count.value);
     
+    count.value.contentId = res.data.contentId
+    count.value.likeTotal = res.data.likeTotal
+    count.value.collectTotal = res.data.collectTotal
+    count.value.commentTotal = res.data.commentTotal
+
+    console.log(count.value);
+    
+
   } catch (e) {
     notifyError()
   }
@@ -108,7 +113,7 @@ const getUserStatus = async (contentId: string) => {
 const tolike = async (contentId: string, type: LikeOrCollect) => {
   try {
     let res
-
+    console.log(contentId);
     switch (type) {
       case likeOrcollect.like:
         res = await Like(contentId)
@@ -161,16 +166,21 @@ const tofollowing = async(creatorId: string, type: FollowUnfollow) => {
     let res;
     switch(type) {
       case followUnfollow.following:
-        console.log(`关注 ${creatorId}`)
         res = await following(creatorId)
+        console.log(res)
         if(res.success) isfollowing.value = true
         break
       case followUnfollow.unfollowing:
-        console.log(`取消关注 ${creatorId}`)
         res = await unfollowing(creatorId)
+        console.log(res)
         if(res.success) isfollowing.value = false
         break
     }
+
+    if (!res?.success) {
+      notifyError(res?.message)
+    }
+    
   } catch(e) {
     notifyError()
   }
@@ -201,7 +211,7 @@ watch(
   () => route.query.contentId,
   (id) => {
     if (!id) return
-
+    
     const contentId = id as string
 
     getContentCountOnly(contentId)
@@ -209,6 +219,15 @@ watch(
   },
   { immediate: true }
 )
+
+/* 兜底 */
+onMounted(() => {
+  const contentId = route.query.contentId as string
+  if (!contentId) return
+
+  getContentCountOnly(contentId)
+  getUserStatus(contentId)
+})
 </script>
 
 <template>
@@ -225,9 +244,18 @@ watch(
         <div class="time-act">
             <p class="update-time">更新时间：{{ detail?.updateTime }}</p>
             <div class="act">
-                <v-icon name="bi-hand-thumbs-up" class="ico" scale="1.3" :fill="islike ?'#33CFFF' : '#C5C6C9'" hover animation="float" speed="fast" @click="islike? unlike() : like()"/>{{ count.likeTotal }}
-                <v-icon name="fa-regular-star" class="ico" scale="1.3" :fill="iscollect ?'#33CFFF' : '#C5C6C9'" hover animation="float" speed="fast" @click="iscollect? uncollect() : collect()"/> {{ count.collectTotal }}
-                <v-icon name="bi-chat-dots" class="ico" scale="1.3" fill="#C5C6C9" hover animation="float" speed="fast" @click="comment()"/>{{ count?.commentTotal }}
+              <span class="act-item">
+                <v-icon name="bi-hand-thumbs-up" class="ico" scale="1.3" :fill="islike ?'#33CFFF' : '#C5C6C9'" hover animation="float" speed="fast" @click="islike? unlike() : like()"/>
+                {{ count.likeTotal }}
+              </span>
+              <span class="act-item">
+                <v-icon name="fa-regular-star" class="ico" scale="1.3" :fill="iscollect ?'#33CFFF' : '#C5C6C9'" hover animation="float" speed="fast" @click="iscollect? uncollect() : collect()"/>
+                {{ count.collectTotal }}
+              </span>
+              <span class="act-item">
+                <v-icon name="bi-chat-dots" class="ico" scale="1.3" fill="#C5C6C9" hover animation="float" speed="fast" @click="comment()"/>
+                {{ count.commentTotal }}
+              </span>
             </div>
         </div>
         <div class="content">
@@ -310,6 +338,13 @@ watch(
             display: flex;
             gap: 0 10px;
             align-items: center;
+
+            .act-item{
+                display: flex;
+                align-items: center;
+                gap: 5px;
+                color: #606266;
+            }
 
             .ico:hover {
                 cursor: pointer;

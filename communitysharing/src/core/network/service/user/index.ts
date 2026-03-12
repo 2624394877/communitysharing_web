@@ -9,9 +9,9 @@ export const getSearchUserReq: getSearchUserInfo = (params:searchUserParams) => 
 }
 
 export const following: followORUnfollow = (followingUserId: string) => {
-    return axios.post(user.follwing,followingUserId)
+    return axios.post(user.follwing,{followingUserId})
 }
 
 export const unfollowing: followORUnfollow = (followingUserId: string) => {
-    return axios.post(user.unfollowing,followingUserId)
+    return axios.post(user.unfollowing,{followingUserId})
 }
