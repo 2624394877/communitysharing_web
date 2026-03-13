@@ -12,3 +12,15 @@ export const getBatchChildComment: batchChildComment = (params: reqChildParams) 
 export const publishComment: Publish = (params: publish) => {
     return axios.post(comment.publish,params)
 }
+
+export const getLike: likeOrNot = (commentId: number) => {
+    return axios.post(comment.like,{commentId})
+}
+
+export const getUnlike: likeOrNot = (commentId: number) => {
+    return axios.post(comment.unlike, {commentId})
+}
+
+export const Del: deleteComment = (commentId: number) => {
+    return axios.post(comment.del,{commentId})
+}

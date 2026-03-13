@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { watch, ref, onMounted } from 'vue'
-import { getBatchChildComment, getBatchComment } from '@/core/network/service/comment/index'
+import { Del, getBatchChildComment, getBatchComment, getLike, getUnlike } from '@/core/network/service/comment/index'
 import type { ScrollbarDirection } from 'element-plus'
 import PublishComment from '@/model_web/components/publicComment/index.vue'
 import mitter from '@/core/bus'
@@ -33,12 +33,41 @@ const loading = ref(false)
 const dialogVisible = ref(false)
 const replayCommentId = ref<number>(0)
 
+
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms))
+
+
+type CommentIndex = {
+  comment:any
+  parent?:any
+}
+
+const commentMap = new Map<number, CommentIndex>()
+
+const buildCommentIndex = () => {
+
+  commentMap.clear()
+
+  comments.value.forEach(item => {
+
+    commentMap.set(item.commentId,{
+      comment:item
+    })
+
+    item.children?.forEach(child=>{
+      commentMap.set(child.commentId,{
+        comment:child,
+        parent:item
+      })
+    })
+
+  })
+}
 
 /* ---------------- 子评论请求 ---------------- */
 
 const batchQuery = async (commentId: number) => {
-
+    
   if (loading.value) return
 
   /* 如果换评论，需要重置分页 */
@@ -56,7 +85,8 @@ const batchQuery = async (commentId: number) => {
   try {
 
     const res = await getBatchChildComment(childParams.value)
-
+    // console.log(res);
+    
     if (!res.success) return
 
     if (res.data.length < res.pageSize) {
@@ -69,7 +99,9 @@ const batchQuery = async (commentId: number) => {
       parent.children = parent.children || []
       parent.children.push(...res.data)
     }
+    console.log(comments.value);
 
+    buildCommentIndex()
   } catch (error) {
 
     ElNotification.error({
@@ -94,7 +126,8 @@ const reqComment = async (params: reqParams) => {
   try {
 
     const res = await getBatchComment(params)
-
+    // console.log(res);
+    
     if (!res.success) {
       ElNotification.error({
         title: "错误！",
@@ -132,6 +165,7 @@ const reqComment = async (params: reqParams) => {
 
     commentTotal.value = res.totalCount
 
+    buildCommentIndex()
   } catch (error) {
     console.log(error);
     
@@ -192,6 +226,78 @@ const loadMore = (direction: ScrollbarDirection) => {
 
 }
 
+const like = async (commentId:number) => {
+
+  const comment = commentMap.get(commentId)
+  if (!comment) return
+
+  const oldLike = comment.comment.like
+  const newLike = !oldLike
+
+  // 乐观更新
+  comment.comment.like = newLike
+  comment.comment.likeTotal += newLike ? 1 : -1
+
+  let res
+
+  if (newLike) {
+    res = await getLike(commentId)
+  } else {
+    res = await getUnlike(commentId)
+  }
+
+  if (!res?.success) {
+    // 回滚
+    comment.comment.like = oldLike
+    comment.comment.likeTotal += oldLike ? 1 : -1
+  }
+
+}
+
+const del = async(commentId: number)=> {
+    console.log("删除",comment);
+    try {
+        const res = await Del(commentId);
+        console.log(res);
+        if(!res.success) {
+            ElNotification.error({
+                title: "错误！",
+                message: res.message,
+                duration: 2500
+            })
+            return;
+        }
+
+        const node = commentMap.get(commentId)
+        if(!node) return
+
+        if(!node.parent){
+            // 一级评论
+            const index = comments.value.indexOf(node.comment)
+            if(index !== -1) comments.value.splice(index,1)
+        }else{
+            // 子评论
+            const children = node.parent.children
+            const index = children.indexOf(node.comment)
+            if(index !== -1) children.splice(index,1)
+        }
+
+        commentMap.delete(commentId)
+
+        mitter.emit('refresh',false)
+        ElNotification.success({
+            title: "删除成功！",
+            duration: 2500
+        })
+    } catch(error) {
+        ElNotification.error({
+            title: "错误！",
+            message: "删除失败！",
+            duration: 2500
+        })
+    }
+}
+
 /* ---------------- 监听详情变化 ---------------- */
 
 watch(
@@ -208,7 +314,6 @@ watch(
     params.value.contentId = detail.id
 
     reqComment(params.value)
-
   },
   { immediate: true }
 )
@@ -228,15 +333,20 @@ onMounted(()=> {
                 <div class="avator"><img :src="item?.avatar" width="40px" height="40px"></div>
                 <div class="comment-content">
                     <div class="txt">
-                        <div class="nickname">{{ item?.nickname }}</div>
+                        <div class="nickname">
+                            {{ item?.nickname }}
+                            <span style="float: right; color: #909399;" @click="del(item.commentId)">
+                                <v-icon name="md-deleteforever-outlined" class="ico" scale="1.3" hover animation="float" speed="fast" />
+                            </span>
+                        </div>
                         <div class="comment-text">{{ item?.comment }}</div>
                     </div>
                     <div class="image"><img :src="item?.imageUrl" width="120px" height="100px"
                             v-if="item?.imageUrl != ''"></div>
                     <div class="count">
                         <span class="comment-time">{{ item.createTime }}</span>
-                        <span class="action-item"><v-icon name="bi-hand-thumbs-up" class="ico" scale="1.3" hover
-                                animation="float" speed="fast" />{{ item.likeTotal }}</span>
+                        <span class="action-item"><v-icon name="bi-hand-thumbs-up" class="ico" scale="1.3" :fill="item.like ?'#33CFFF' : '#C5C6C9'" hover
+                                animation="float" speed="fast" @click="like(item.commentId)" />{{ item.likeTotal }}</span>
                         <span class="action-item" @click="comment(item.commentId)"><v-icon name="bi-chat-dots" class="ico" scale="1.3" hover
                                 animation="float" speed="fast" />{{ item.childrenCommentTotal }}</span>
                     </div>
@@ -247,19 +357,24 @@ onMounted(()=> {
                         </div>
                         <div class="comment-content">
                             <div class="txt">
-                                <div class="nickname">{{ child.nickname }}</div>
+                                <div class="nickname">
+                                    {{ child.nickname }}
+                                    <span style="float: right; color: #909399;" @click="del(child.commentId)">
+                                        <v-icon name="md-deleteforever-outlined" class="ico" scale="1.3" hover animation="float" speed="fast" />
+                                    </span>
+                                </div>
                                 <div class="comment-text">{{ child.comment }}</div>
                             </div>
                             <div class="image"><img :src="child.imageUrl" width="120px" height="100px"
-                                    v-if="child.imageUrl != undefined"></div>
+                                    v-if="child.imageUrl != ''"></div>
                             <div v-if="child.replyUserName" class="reply-user">
                                 <span class="reply-tag">回复</span>
                                 <span class="reply-name">@{{ child.replyUserName }}</span>
                             </div>
                             <div class="count">
                                 <span class="comment-time">{{ child.createTime }}</span>
-                                <span class="action-item"><v-icon name="bi-hand-thumbs-up" class="ico" scale="1.3" hover
-                                        animation="float" speed="fast" />{{ child.likeTotal }}</span>
+                                <span class="action-item" @click="like(child.commentId)"><v-icon name="bi-hand-thumbs-up" class="ico" scale="1.3" hover
+                                        :fill="child.like ?'#33CFFF' : '#C5C6C9'" animation="float" speed="fast" />{{ child.likeTotal }}</span>
                                 <span class="action-item" @click="comment(child.commentId)"><v-icon name="bi-chat-dots" class="ico" scale="1.3" hover
                                         animation="float" speed="fast" /></span>
                             </div>
@@ -338,10 +453,13 @@ onMounted(()=> {
                 justify-content: space-between;
 
                 .nickname {
+                    display: flex;
+                    align-items: center;
                     font-size: 14px;
                     font-weight: 500;
                     color: #409eff;
                     cursor: pointer;
+                    gap: 0px 20px;
                 }
 
                 .nickname:hover {

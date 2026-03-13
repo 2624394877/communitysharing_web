@@ -14,7 +14,8 @@ interface commentsParams {
     children?: commentsParams[],
     replyUserName?:string,
     replyUserId?:number,
-    updateTime:string
+    updateTime:string,
+    like: boolean
 }
 
 interface resCommentBase {
@@ -56,3 +57,7 @@ type batchComment = (params: reqParams) => Promise<resCommentBase>;
 type batchChildComment = (params: reqChildParams) => Promise<resCommentBase>;
 
 type Publish = (params: publish) => Promise<resComment>;
+
+type likeOrNot = (commentId: number) => Promise<resComment>; 
+
+type deleteComment = (commentId: number) => Promise<resComment>;
