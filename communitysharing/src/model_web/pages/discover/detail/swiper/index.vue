@@ -17,6 +17,7 @@ const progressCircle = ref<number>(0)
 const progressContent = ref<string>('')
 const autoplayTimeLeft = (s: any, time: number, p: number) => {
     if((props.detail?.imgUris?.length ?? 0) < 1) return;
+    console.log(s);
     progressCircle.value = 1 - p
     progressContent.value = `${Math.ceil(time / 1000)}s`;
 }
