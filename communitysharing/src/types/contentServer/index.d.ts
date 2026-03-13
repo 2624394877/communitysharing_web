@@ -102,6 +102,15 @@ interface contentDetailreq {
     id: string
 }
 
+interface publishContent {
+    title: string,
+    type: number,
+    imgUris: string[],
+    content: string,
+    topicId: number,
+    channelId: number
+}
+
 type getContentListData = (pageNo:number) => Promise<contentListData>; // 这是一个函数类型，返回一个Promise对象
 
 type getContentListbyChannel = (channelId:number,pageNo:number) => Promise<contentListData>; // 这是一个函数类型，返回一个Promise对象
