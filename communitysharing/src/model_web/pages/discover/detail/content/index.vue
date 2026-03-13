@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch,onMounted } from "vue"
+import { ref, watch,onMounted, reactive } from "vue"
 import { useRoute } from "vue-router"
 
 import avator from "@/assets/resource/imges/avator.png"
@@ -17,7 +17,8 @@ import {
 import { likeOrcollect, followUnfollow } from "@/types/enum"
 import { type FollowUnfollow, type LikeOrCollect } from "@/types/enum/enumType"
 import { following, unfollowing } from "@/core/network/service/user"
-
+import publishComment from '@/model_web/components/publicComment/index.vue'
+import mitter from '@/core/bus'
 /* props */
 const props = defineProps<{
   detail: contentDetail | null
@@ -27,16 +28,19 @@ const props = defineProps<{
 const route = useRoute()
 
 /* 状态 */
-const count = ref<contentCount>({
+const count = reactive<contentCount>({
   contentId: "",
   likeTotal: 0,
   collectTotal: 0,
   commentTotal: 0
 })
 
+const ready = ref(false)
+
 const islike = ref(false)
 const iscollect = ref(false)
 const isfollowing = ref(false)
+const dialogVisible = ref(false)
 
 /* ---------------- 工具函数 ---------------- */
 
@@ -78,13 +82,13 @@ const getContentCountOnly = async (contentId: string) => {
       notifyError(res.message)
       return
     }
-    
-    count.value.contentId = res.data.contentId
-    count.value.likeTotal = res.data.likeTotal
-    count.value.collectTotal = res.data.collectTotal
-    count.value.commentTotal = res.data.commentTotal
 
-    console.log(count.value);
+    count.contentId = res.data.contentId
+    count.likeTotal = res.data.likeTotal
+    count.collectTotal = res.data.collectTotal
+    count.commentTotal = res.data.commentTotal
+
+    console.log(count);
     
 
   } catch (e) {
@@ -119,7 +123,9 @@ const tolike = async (contentId: string, type: LikeOrCollect) => {
         res = await Like(contentId)
         if (res.success) {
           islike.value = true
-          count.value.likeTotal++
+          Object.assign(count,{
+            likeTotal: count.likeTotal + 1
+          })
           rebuildcontent(contentId,props.detail?.creatorId ?? '')
         }
         break
@@ -128,7 +134,7 @@ const tolike = async (contentId: string, type: LikeOrCollect) => {
         res = await UnLike(contentId)
         if (res.success) {
           islike.value = false
-          count.value.likeTotal--
+          count.likeTotal--
           rebuildcontent(contentId,props.detail?.creatorId ?? '')
         }
         break
@@ -137,7 +143,7 @@ const tolike = async (contentId: string, type: LikeOrCollect) => {
         res = await Collect(contentId)
         if (res.success) {
           iscollect.value = true
-          count.value.collectTotal++
+          count.collectTotal++
           rebuildcontent(contentId,props.detail?.creatorId ?? '')
         }
         break
@@ -146,7 +152,7 @@ const tolike = async (contentId: string, type: LikeOrCollect) => {
         res = await UnCollect(contentId)
         if (res.success) {
           iscollect.value = false
-          count.value.collectTotal--
+          count.collectTotal--
           rebuildcontent(contentId,props.detail?.creatorId ?? '')
         }
         break
@@ -188,14 +194,15 @@ const tofollowing = async(creatorId: string, type: FollowUnfollow) => {
 
 /* ---------------- 交互 ---------------- */
 
-const like = () => tolike(count.value.contentId, likeOrcollect.like)
-const unlike = () => tolike(count.value.contentId, likeOrcollect.unlike)
+const like = () => tolike(count.contentId, likeOrcollect.like)
+const unlike = () => tolike(count.contentId, likeOrcollect.unlike)
 
-const collect = () => tolike(count.value.contentId, likeOrcollect.collect)
-const uncollect = () => tolike(count.value.contentId, likeOrcollect.uncollect)
+const collect = () => tolike(count.contentId, likeOrcollect.collect)
+const uncollect = () => tolike(count.contentId, likeOrcollect.uncollect)
 
 const comment = () => {
-  console.log("评论", count.value.contentId)
+  console.log("评论", count.contentId)
+  dialogVisible.value = true;
 }
 
 const toPersonHome = (id: string) => {
@@ -205,28 +212,50 @@ const toPersonHome = (id: string) => {
 const follow = (creatorId: string) => tofollowing(creatorId, followUnfollow.following)
 const unfollow = (creatorId: string) => tofollowing(creatorId, followUnfollow.unfollowing)
 
+const getfresh = async() => {
+  // console.log("刷新");
+  
+  dialogVisible.value = false
+  const contentId = props.detail?.id
+  if (!contentId) return
+  await delay(1000)
+  getContentCountOnly(contentId)
+  getUserStatus(contentId)
+  console.log(count);
+
+  ready.value = true
+} 
+
 /* ---------------- 初始化 ---------------- */
 
 watch(
-  () => route.query.contentId,
-  (id) => {
-    if (!id) return
+  () => route.query,
+  (query) => {
+    if (!query) return
     
-    const contentId = id as string
+    const contentId = query.contentId as string
 
     getContentCountOnly(contentId)
     getUserStatus(contentId)
+
+    ready.value = true
   },
   { immediate: true }
 )
 
+onMounted(()=>{
+  mitter.on('refresh',getfresh)
+})
+
 /* 兜底 */
 onMounted(() => {
-  const contentId = route.query.contentId as string
+  const contentId = props.detail?.id
   if (!contentId) return
 
   getContentCountOnly(contentId)
   getUserStatus(contentId)
+
+  ready.value = true
 })
 </script>
 
@@ -261,6 +290,14 @@ onMounted(() => {
         <div class="content">
             {{ detail?.content }}
         </div>
+        <el-dialog v-model="dialogVisible" class="custom-transition-dialog" width="30%" :transition="'dialog-custom-object'">
+            <template #header>
+                <h3 class="log_title" style="">
+                    发布评论
+                </h3>
+            </template>
+            <publishComment :contentId="detail?.id" :replayUserId="null" />
+        </el-dialog>
     </div>
 </template>
 
@@ -360,6 +397,32 @@ onMounted(() => {
         color: #303133;
         margin-top: 15px;
         white-space: pre-wrap;
+    }
+
+    /* 登录框样式 */
+    /* Slide Animation */
+    .dialog-slide-enter-active,
+    .dialog-slide-leave-active,
+    .dialog-slide-enter-active .el-dialog,
+    .dialog-slide-leave-active .el-dialog {
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+
+    .dialog-slide-enter-from,
+    .dialog-slide-leave-to {
+    opacity: 0;
+    }
+
+    .dialog-slide-enter-from .el-dialog,
+    .dialog-slide-leave-to .el-dialog {
+    transform: translateY(-100px);
+    opacity: 0;
+    }
+    /* header */
+    .log_title {
+        width: 100%;
+        text-align: center;
+        margin: 25px 0px 0px 0px;
     }
 }
 </style>

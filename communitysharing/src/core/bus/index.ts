@@ -6,6 +6,7 @@ type Events = {
   "noMoreDataTopic": boolean;
   "emptyTopic": boolean;
   "searchUser": searchParams;
+  "refresh": boolean
 };
 
 const emitter = mitt<Events>();

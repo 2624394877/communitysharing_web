@@ -8,3 +8,7 @@ export const getBatchComment: batchComment = (params:reqParams) => {
 export const getBatchChildComment: batchChildComment = (params: reqChildParams) => {
     return axios.post(comment.batchChild,params)
 }
+
+export const publishComment: Publish = (params: publish) => {
+    return axios.post(comment.publish,params)
+}

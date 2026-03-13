@@ -38,6 +38,21 @@ interface reqChildParams {
     pageNo: number
 }
 
+interface resComment {
+    success: boolean,
+    message?: string,
+    errorCode?: string
+}
+
+interface publish {
+    contentId: string,
+    content: string | null,
+    imageUrl: string | null,
+    replayCommentId?: number | null
+}
+
 type batchComment = (params: reqParams) => Promise<resCommentBase>;
 
 type batchChildComment = (params: reqChildParams) => Promise<resCommentBase>;
+
+type Publish = (params: publish) => Promise<resComment>;

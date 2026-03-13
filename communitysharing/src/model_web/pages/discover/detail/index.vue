@@ -38,6 +38,7 @@ const volumeProgressRef = ref<HTMLElement>()
 const fileType = reactive({
     type: ''
 })
+const loading = ref(false)
 /* ---------------- 播放状态 ---------------- */
 
 const videoDuration = ref(0)
@@ -298,7 +299,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div class="detail-container">
+    <div class="detail-container" v-loading="loading" :data="detail">
 
         <div class="multimedia">
             <!-- 视频 -->

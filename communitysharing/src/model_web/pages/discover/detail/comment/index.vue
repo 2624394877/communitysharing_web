@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { watch, ref } from 'vue'
+import { watch, ref, onMounted } from 'vue'
 import { getBatchChildComment, getBatchComment } from '@/core/network/service/comment/index'
 import type { ScrollbarDirection } from 'element-plus'
-
+import PublishComment from '@/model_web/components/publicComment/index.vue'
+import mitter from '@/core/bus'
 /* props */
 const props = withDefaults(defineProps<{
   detail: contentDetail | null
@@ -28,6 +29,11 @@ const showWho = ref<number>(0)
 const hasMore = ref(true)
 const childhasMore = ref(true)
 const loading = ref(false)
+
+const dialogVisible = ref(false)
+const replayCommentId = ref<number>(0)
+
+const delay = (ms: number) => new Promise(res => setTimeout(res, ms))
 
 /* ---------------- 子评论请求 ---------------- */
 
@@ -142,6 +148,28 @@ const reqComment = async (params: reqParams) => {
   }
 }
 
+const comment = (commentId: number) => {
+    replayCommentId.value = commentId
+    dialogVisible.value = true
+    console.log(replayCommentId.value);
+}
+
+const getfresh = async() => {
+    // console.log('刷新');
+    dialogVisible.value = false
+    if (!props.detail) return
+
+    /* 重置数据 */
+    comments.value = []
+    params.value.pageNo = 1
+    hasMore.value = true
+
+    params.value.contentId = props.detail.id
+
+    await delay(1000)
+    reqComment(params.value)
+}
+
 /* ---------------- 滚动加载 ---------------- */
 
 const loadMore = (direction: ScrollbarDirection) => {
@@ -185,6 +213,9 @@ watch(
   { immediate: true }
 )
 
+onMounted(()=> {
+    mitter.on('refresh',getfresh)
+})
 </script>
 
 <template>
@@ -206,7 +237,7 @@ watch(
                         <span class="comment-time">{{ item.createTime }}</span>
                         <span class="action-item"><v-icon name="bi-hand-thumbs-up" class="ico" scale="1.3" hover
                                 animation="float" speed="fast" />{{ item.likeTotal }}</span>
-                        <span class="action-item"><v-icon name="bi-chat-dots" class="ico" scale="1.3" hover
+                        <span class="action-item" @click="comment(item.commentId)"><v-icon name="bi-chat-dots" class="ico" scale="1.3" hover
                                 animation="float" speed="fast" />{{ item.childrenCommentTotal }}</span>
                     </div>
                     <!-- 这是子评论 -->
@@ -229,7 +260,7 @@ watch(
                                 <span class="comment-time">{{ child.createTime }}</span>
                                 <span class="action-item"><v-icon name="bi-hand-thumbs-up" class="ico" scale="1.3" hover
                                         animation="float" speed="fast" />{{ child.likeTotal }}</span>
-                                <span class="action-item"><v-icon name="bi-chat-dots" class="ico" scale="1.3" hover
+                                <span class="action-item" @click="comment(child.commentId)"><v-icon name="bi-chat-dots" class="ico" scale="1.3" hover
                                         animation="float" speed="fast" /></span>
                             </div>
                         </div>
@@ -242,6 +273,14 @@ watch(
                 <span>没有更多数据</span>
             </div>
         </div>
+        <el-dialog v-model="dialogVisible" class="custom-transition-dialog" width="30%" :transition="'dialog-custom-object'">
+            <template #header>
+                <h3 class="log_title" style="">
+                    发布评论
+                </h3>
+            </template>
+        <PublishComment :contentId="detail?.id" :replayUserId="replayCommentId" />
+        </el-dialog>
     </el-scrollbar>
 </template>
 
