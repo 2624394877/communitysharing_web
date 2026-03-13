@@ -17,11 +17,11 @@ export default defineConfig(({ mode }) => {
     plugins: [
       vue(),
       AutoImport({
-        resolvers: [ElementPlusResolver(),VantResolver()],
+        resolvers: [ElementPlusResolver(), VantResolver()],
         dts: 'src/types/auto-imports.d.ts' // 自动导入类型声明
       }),
       Components({
-        resolvers: [ElementPlusResolver(),VantResolver()],
+        resolvers: [ElementPlusResolver(), VantResolver()],
         dts: 'src/types/components.d.ts' // 组件类型声明
       }),
       // 打包分析插件（仅生产环境）
@@ -43,7 +43,7 @@ export default defineConfig(({ mode }) => {
       sourcemap: env.VITE_SOURCEMAP === 'true', // 按需开启
       minify: 'terser', // 压缩方式
       cssCodeSplit: true, // CSS代码分割
-      
+
       // Rollup配置
       rollupOptions: {
         output: {
@@ -76,7 +76,7 @@ export default defineConfig(({ mode }) => {
         }
       }
     },
-    server:{
+    server: {
       open: true,
       proxy: {
         '/api': {

@@ -2,13 +2,13 @@
 </script>
 
 <template>
-    <div class="web_main">
+    <div class="pc_web_main">
         <router-view></router-view>
     </div>
 </template>
 
 <style scoped>
-.web_main{
+.pc_web_main{
     width: 100%;
     height: 100%;
 }
