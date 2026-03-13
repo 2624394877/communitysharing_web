@@ -7,6 +7,7 @@ import { getCurrentTime2miunte } from '@/utils/dateUtils'
 import music from '@/model_web/pages/discover/detail/music/index.vue'
 import content from '@/model_web/pages/discover/detail/content/index.vue'
 import comment from '@/model_web/pages/discover/detail/comment/index.vue'
+import swiper from '@/model_web/pages/discover/detail/swiper/index.vue'
 /* ---------------- 常量数据 ---------------- */
 const constant = {
     video: 'video',
@@ -352,6 +353,7 @@ onUnmounted(() => {
                     </div>
                 </div>
                 <music v-if="detail?.type === 1 && fileType.type === constant.audio" :detail="fileType.type === constant.audio? detail:null"></music>
+                <swiper v-if="detail?.type === 0" :detail="detail"></swiper>
                 <content :detail="detail"></content>
             </el-scrollbar>
         </div>
