@@ -26,3 +26,12 @@ export const followUnfollow = {
     following: 'following',
     unfollowing: 'unfollowing'
 } as const
+
+export const fileType = {
+    image: 'image',
+    text: 'text',
+    video: 'video',
+    audio: 'audio',
+    doc: 'doc',
+    link: 'link'
+} as const

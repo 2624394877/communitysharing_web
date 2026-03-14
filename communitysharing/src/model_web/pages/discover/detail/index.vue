@@ -55,7 +55,7 @@ const isDraggingVolume = ref(false)
 
 /* ---------------- 音量 ---------------- */
 
-const volume = ref(0)
+const volume = ref(100)
 
 /* ---------------- 计算属性 ---------------- */
 

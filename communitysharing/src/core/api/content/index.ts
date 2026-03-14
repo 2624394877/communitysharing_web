@@ -9,7 +9,8 @@ const contentApi = {
     unlike: '/sharing/content/unlike',
     collect: '/sharing/content/collect',
     uncollect: '/sharing/content/uncollect',
-    rebuildContent: '/es/search/content/doc/rebuild'
+    rebuildContent: '/es/search/content/doc/rebuild',
+    publish: '/sharing/content/publish'
 } as const
 
 export default contentApi;

@@ -1,10 +1,12 @@
+import { fileType } from "@/types/enum"
+
 export const navTabs = [
-    {id: 0, name: "图片",default: true, type:0},
-    {id: 1, name: "文本",default: false, type:0},
-    {id: 2, name: "视频",default: false, type:1},
-    {id: 3, name: "音频",default: false, type:1},
-    {id: 4, name: "文件",default: false, type:2},
-    {id: 5, name: "链接",default: false, type:3}
+    {id: 0, name: "图片",default: true, type:0,filetype: fileType.image},
+    {id: 1, name: "文本",default: false, type:0,filetype: fileType.text},
+    {id: 2, name: "视频",default: false, type:1, filetype: fileType.video},
+    {id: 3, name: "音频",default: false, type:1, filetype: fileType.audio},
+    {id: 4, name: "文档",default: false, type:2, filetype: fileType.doc},
+    {id: 5, name: "链接",default: false, type:3, filetype: fileType.link}
 ]
 
 export const cannelTab = [

@@ -46,3 +46,7 @@ export const UnCollect: toLikeOrCollect = (contentId: string) => {
 export const ReBuildContent: reBuildContent = (contentId: string,creatorId: string) => {
     return axios.post(content.rebuildContent,{contentId,userId: creatorId})
 }
+
+export const Publishes: publishes = (params: publishContent) => {
+    return axios.post(content.publish, params);
+}

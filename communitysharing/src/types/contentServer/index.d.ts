@@ -105,7 +105,10 @@ interface contentDetailreq {
 interface publishContent {
     title: string,
     type: number,
-    imgUris: string[],
+    imgUris: string[] | null,
+    videoUris: string[] | null,
+    fileUris: string[] | null,
+    linkUris: string[] | null,
     content: string,
     topicId: number,
     channelId: number
@@ -126,3 +129,5 @@ type getUserStatuscontent = (contentId: string) => Promise<UserStautscontentReq>
 type toLikeOrCollect = (contentIdORCollect: string) => Promise<resParams>;
 
 type reBuildContent = (contentId: string, creatorId: string) => Promise<resParams>;
+
+type publishes = (params: publishContent) => Promise<resParams>;

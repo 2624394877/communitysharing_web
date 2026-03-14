@@ -1,22 +1,60 @@
 <script setup lang="ts">
-import { reactive, ref } from "vue"
-import { navTabs, cannelTab, topicTab } from "@/model_web/pages/publish/NavTab"
+import { onMounted, reactive, ref } from "vue"
+import { navTabs, cannelTab,topicTab } from "@/model_web/pages/publish/NavTab"
+import type { UploadFile, UploadFiles } from "element-plus"
+import { uploading } from "@/core/network/service/file"
+import { Publishes } from "@/core/network/service/content"
+import type { FileType } from "@/types/enum/enumType"
+import { fileType } from "@/types/enum"
 import { CloseBold } from '@element-plus/icons-vue'
-import type { UploadFile } from 'element-plus'
 
-// 滚动元素
+/* ---------------- 状态 ---------------- */
+
 const scrollRef = ref<HTMLElement | null>(null)
 
-// 发布类型
-const navTab = ref<number>(0)
-
-const title = ref('')
-const textareaInput = ref('')
-const cannel = ref<number | string>('')
-const topic = ref<number | string>('')
+const navTab = ref(0)
+const filetype = ref<FileType | undefined>('image')
 const fileList = ref<UploadFile[]>([])
+const published = ref(false)
 
-/* ------------------ 横向拖拽滚动 ------------------ */
+const map = new Map<number, FileType>()
+
+type UriKey = 'imgUris' | 'videoUris' | 'fileUris'
+
+const uriMap: Record<FileType, UriKey | undefined> = {
+    image: 'imgUris',
+    video: 'videoUris',
+    audio: 'videoUris',
+    doc: 'fileUris',
+    text: undefined,
+    link: undefined
+}
+
+/* ---------------- 发布参数 ---------------- */
+
+const params = reactive<publishContent>({
+  title: '',
+  type: 0,
+  imgUris: null,
+  videoUris: null,
+  fileUris: null,
+  linkUris: null,
+  content: '',
+  topicId: 0,
+  channelId: 0
+})
+
+/* ---------------- 通知 ---------------- */
+
+const notifyWarning = (msg: string) => {
+  ElNotification.warning({
+    title: "警告",
+    message: msg,
+    duration: 2500
+  })
+}
+
+/* ---------------- 横向拖动 ---------------- */
 
 const drag = reactive({
   mouseDown: false,
@@ -40,9 +78,18 @@ const stopDrag = () => {
   drag.mouseDown = false
 }
 
-/* ------------------ 切换类型 ------------------ */
+/* ---------------- tab切换 ---------------- */
 
-const selectTab = (id: number, e: MouseEvent) => {
+const resetFiles = () => {
+  fileList.value = []
+  params.fileUris = null
+  params.imgUris = null
+  params.videoUris = null
+  params.linkUris = null
+}
+
+const selectTab = (id: number, type: number, e: MouseEvent) => {
+
   const target = e.target as HTMLElement
   const navWidth = scrollRef.value!.offsetWidth
 
@@ -52,72 +99,316 @@ const selectTab = (id: number, e: MouseEvent) => {
   })
 
   navTab.value = id
+  params.type = type
+
+  filetype.value = map.get(id)
+
+  resetFiles()
 }
 
-// todo 上传文件请求
+/* ---------------- 文件校验 ---------------- */
 
-// todo 发布请求
+const validateFile = (type: FileType, file: UploadFile) => {
 
-const setParams = () => {
-    let params: publishContent = {
-        title: title.value,
-        type: navTab.value,
-        imgUris: [],
-        content: textareaInput.value,
-        topicId: topic.value as number,
-        channelId: cannel.value as number
+  const raw = file.raw
+  if (!raw) return false
+
+  const sizeOk = raw.size < 100 * 1024 * 1024
+
+  if (!sizeOk) return false
+
+  switch (type) {
+
+    case fileType.image:
+      return raw.type === 'image/png' || raw.type === 'image/jpeg'
+
+    case fileType.video:
+      return raw.type.startsWith('video/')
+
+    case fileType.audio:
+      return raw.type.startsWith('audio/')
+
+    case fileType.doc:
+      const name = file.name.toLowerCase()
+
+      return [
+        'text/plain',
+        'text/markdown',
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      ].includes(raw.type) ||
+        name.endsWith('.md') ||
+        name.endsWith('.doc') ||
+        name.endsWith('.docx') ||
+        name.endsWith('.pdf')
+
+    default:
+      return false
+  }
+}
+
+/* ---------------- 上传 ---------------- */
+
+const upload = async (data: FormData) => {
+
+  try {
+
+    const res = await uploading(data)
+
+    if (!res.success) {
+
+      ElNotification.error({
+        title: "文件上传失败",
+        message: res.message,
+        duration: 2500
+      })
+
+      return
     }
-    console.log(fileList.value);
-    console.log(params);
+
+    ElNotification.success({
+      title: "文件上传成功",
+      duration: 2000
+    })
+
+    return res.data.url
+
+  } catch {
+
+    ElNotification.error({
+      title: "文件上传失败",
+      message: "请重新上传",
+      duration: 2500
+    })
+  }
 }
+
+/* ---------------- 添加文件url ---------------- */
+
+const appendUri = (type: FileType, url: string) => {
+
+  const key = uriMap[type]
+
+  if (!key) return
+
+  if (!params[key]) {
+    params[key] = []
+  }
+
+  ;(params[key] as string[]).push(url)
+
+}
+
+/* ---------------- 文件处理 ---------------- */
+
+const calibration = async (
+  type: FileType | undefined,
+  file: UploadFile,
+  files: UploadFiles
+) => {
+
+  if (!type) {
+    notifyWarning("文件类型错误")
+    return
+  }
+
+  if (!validateFile(type, file)) {
+
+    notifyWarning("文件格式错误或超过100MB")
+
+    files.splice(files.indexOf(file), 1)
+
+    return
+  }
+
+  const form = new FormData()
+  form.append("file", file.raw!)
+
+  const url = await upload(form)
+
+  if (!url) {
+    files.splice(files.indexOf(file), 1)
+    return
+  }
+
+  appendUri(type, url)
+}
+
+/* ---------------- 发布 ---------------- */
+
+const publish = async () => {
+
+  if (filetype.value !== fileType.text && filetype.value !== fileType.link) {
+
+    if (fileList.value.length === 0) {
+      notifyWarning("至少需要一个文件")
+      return
+    }
+
+  }
+
+  published.value = true
+
+  try {
+
+    const res = await Publishes(params)
+
+    if (!res.success) {
+
+      notifyWarning(res.message ?? '')
+
+      return
+    }
+
+    ElNotification.success({
+      title: "发布成功",
+      duration: 2500
+    })
+
+    resetFiles()
+
+  } catch {
+
+    ElNotification.error({
+      title: "发布失败",
+      duration: 2500
+    })
+
+  } finally {
+
+    published.value = false
+
+  }
+
+}
+
+/* ---------------- 初始化 ---------------- */
+
+onMounted(() => {
+
+  navTabs.forEach(item => {
+    map.set(item.id, item.filetype)
+  })
+
+})
 </script>
 
 <template>
-    <div class="publish">
-        <div class="top_nav" ref="scrollRef"  @mousedown="startDrag" @mousemove="onDrag" @mouseup="stopDrag" @mouseleave="stopDrag">
-            <div class="type" :class="{ active: navTab === nav.id }" v-for="nav in navTabs" :key="nav.id" @click="selectTab(nav.id,$event)">{{ nav.name }}</div>
+    <div class="publish" v-loading="published">
+
+        <!-- 顶部类型导航 -->
+        <div class="top_nav" ref="scrollRef" @mousedown="startDrag" @mousemove="onDrag" @mouseup="stopDrag"
+            @mouseleave="stopDrag">
+            <div class="type" v-for="nav in navTabs" :key="nav.id" :class="{ active: navTab === nav.id }"
+                @click="selectTab(nav.id, nav.type, $event)">
+                {{ nav.name }}
+            </div>
         </div>
-       <div class="content-publish">
+
+        <!-- 发布内容 -->
+        <div class="content-publish">
+
             <el-scrollbar>
+
+                <!-- 标题 -->
                 <div class="input-title">
                     <span>请输入标题</span>
-                    <span>
-                        <el-input v-model="title" class="title" clearable :clear-icon="CloseBold" placeholder="请输入标题" />
-                    </span>
+
+                    <el-input v-model="params.title" class="title" clearable :clear-icon="CloseBold"
+                        placeholder="请输入标题" />
                 </div>
+
+                <!-- 上传区域 -->
                 <div class="upload">
-                    <el-upload v-model:file-list="fileList" class="upload-demo" drag :auto-upload="false" multiple>
-                        <el-icon class="el-icon--upload"><v-icon name="la-cloud-upload-alt-solid" fill="#8DDDFF"
-                                scale="1" /></el-icon>
+
+                    <el-upload v-if="filetype !== fileType.text && filetype !== fileType.link"
+                        v-model:file-list="fileList" class="upload-demo" drag multiple :auto-upload="false"
+                        :on-change="(file, files) => calibration(filetype, file, files)">
+
+                        <el-icon class="el-icon--upload">
+                            <v-icon name="la-cloud-upload-alt-solid" fill="#8DDDFF" scale="1" />
+                        </el-icon>
+
                         <div class="el-upload__text">
-                            <div class="tip">上传图片</div>
-                            <div class="desc">JPG, PNG, GIF - 必选项</div>
+
+                            <div class="tip">
+
+                                <span v-if="filetype === fileType.image">上传图片</span>
+                                <span v-else-if="filetype === fileType.video">上传视频</span>
+                                <span v-else-if="filetype === fileType.audio">上传音频</span>
+                                <span v-else-if="filetype === fileType.doc">上传文档</span>
+
+                            </div>
+
+                            <div class="desc">
+
+                                <span v-if="filetype === fileType.image">
+                                    JPG / PNG / GIF
+                                </span>
+
+                                <span v-else-if="filetype === fileType.video">
+                                    MP4 / WEBM / 3GP
+                                </span>
+
+                                <span v-else-if="filetype === fileType.audio">
+                                    MP3 / WAV / AAC
+                                </span>
+
+                                <span v-else-if="filetype === fileType.doc">
+                                    DOCX / MARKDOWN / PDF
+                                </span>
+
+                            </div>
+
                         </div>
+
                     </el-upload>
+
                 </div>
+
+                <!-- 正文 -->
                 <div class="context">
+
                     <span>正文</span>
-                    <el-input v-model="textareaInput" :autosize="{ minRows: 6, maxRows: 10 }" maxlength="100"
-                        type="textarea" show-word-limit size="large" placeholder="请输入正文内容" clearable />
+
+                    <el-input v-model="params.content" type="textarea" size="large" maxlength="100" show-word-limit
+                        :autosize="{ minRows: 6, maxRows: 10 }" clearable :placeholder="filetype === fileType.link
+                                ? '请输入链接或正文内容'
+                                : '请输入正文内容'
+                            " />
+
                 </div>
+
+                <!-- 频道 + 主题 -->
                 <div class="select-cannel-topic">
-                    <el-select v-model="cannel" class="cannel" placeholder="请选择频道" style="width: 43%" clearable>
+
+                    <el-select v-model="params.channelId" class="cannel" placeholder="请选择频道" clearable
+                        style="width: 43%">
                         <template #prefix>
                             <span class="select-prefix">频道</span>
                         </template>
+
                         <el-option v-for="item in cannelTab" :key="item.id" :label="item.name" :value="item.id" />
                     </el-select>
-                    <el-select v-model="topic" class="topic" placeholder="请选择频道" style="width: 43%" clearable>
+
+                    <el-select v-model="params.topicId" class="topic" placeholder="请选择主题" clearable style="width: 43%">
                         <template #prefix>
                             <span class="select-prefix">主题</span>
                         </template>
+
                         <el-option v-for="item in topicTab" :key="item.id" :label="item.name" :value="item.id" />
                     </el-select>
+
                 </div>
-                <div class="submit" @click="setParams">
+
+                <!-- 发布按钮 -->
+                <div class="submit" @click="publish">
                     发布
                 </div>
+
             </el-scrollbar>
+
         </div>
     </div>
 </template>
