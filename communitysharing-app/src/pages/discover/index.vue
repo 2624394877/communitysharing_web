@@ -2,11 +2,7 @@
 </script>
 
 <template>
-   <view>
-    <SearchInput/>
-    <slot></slot>
-    <TabBar/>
-  </view>
+    <view><text>发现</text></view>
 </template>
 
 <style scoped>

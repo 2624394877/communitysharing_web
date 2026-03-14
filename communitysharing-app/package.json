@@ -34,6 +34,8 @@
     "@dcloudio/uni-quickapp-webview": "3.0.0-4080720251210001",
     "@vueuse/core": "^13.5.0",
     "axios": "^1.13.6",
+    "less": "^4.6.4",
+    "oh-vue-icons": "^1.0.0-rc3",
     "pinia": "^3.0.4",
     "vue": "^3.5.30",
     "vue-i18n": "^9.14.5",

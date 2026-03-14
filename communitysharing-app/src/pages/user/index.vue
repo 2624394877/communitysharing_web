@@ -2,11 +2,7 @@
 </script>
 
 <template>
-   <view>
-    <SearchInput/>
-    <slot></slot>
-    <TabBar/>
-  </view>
+    <view class="mine">我的</view>
 </template>
 
 <style scoped>
