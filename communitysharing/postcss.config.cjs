@@ -1,4 +1,4 @@
-const pxToViewport = require('postcss-px-to-viewport')
+const pxToViewport = require('postcss-px-to-viewport-8-plugin')
 
 module.exports = {
   plugins: [
