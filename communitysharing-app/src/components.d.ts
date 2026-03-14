@@ -7,14 +7,7 @@ export {}
 
 declare module 'vue' {
   export interface GlobalComponents {
-    AppFooter: typeof import('./components/AppFooter.vue')['default']
-    AppLogos: typeof import('./components/AppLogos.vue')['default']
-    ContentCard: typeof import('./components/contentCard/index.vue')['default']
-    HiCounter: typeof import('./components/HiCounter.vue')['default']
-    InputEntry: typeof import('./components/InputEntry.vue')['default']
-    Search: typeof import('./components/search/index.vue')['default']
     SearchInput: typeof import('./components/searchInput/index.vue')['default']
-    SearchInputSearchInput: typeof import('./components/searchInput/SearchInput.vue')['default']
     TabBar: typeof import('./components/TabBar/index.vue')['default']
   }
 }
