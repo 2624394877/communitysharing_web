@@ -235,9 +235,14 @@ const calibration = async (
   appendUri(type, url)
 }
 
+// const comforem = new Promise((fail,success)=>{
+
+// });
 /* ---------------- 发布 ---------------- */
 
 const publish = async () => {
+
+  // 使用await等待promise弹出框确认
 
   if (filetype.value !== fileType.text && filetype.value !== fileType.link) {
 
@@ -409,6 +414,7 @@ onMounted(() => {
 
             </el-scrollbar>
 
+            <!-- 弹出框确认发布，同时包含为可选项的封面上传 -->
         </div>
     </div>
 </template>
