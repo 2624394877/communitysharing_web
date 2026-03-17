@@ -1,7 +1,7 @@
 import { OhVueIcon, addIcons } from "oh-vue-icons"
 import { CoSearch,BiHeart,BiHandThumbsUp,MdCreateOutlined,RiVideoLine,BiListUl,BiPlayCircle,BiPauseCircle,BiArrowsFullscreen
   ,BiFullscreenExit,HiVolumeUp,BiVolumeMute,BiVolumeUpFill,CoMediaPlay,LaPauseSolid,MdSkipnextRound,MdSkippreviousRound,BiVolumeUp,
-  MdReorderRound, BiChatDots,FaRegularStar,MdDeleteforeverOutlined,LaCloudUploadAltSolid } from "oh-vue-icons/icons";
+  MdReorderRound, BiChatDots,FaRegularStar,MdDeleteforeverOutlined,LaCloudUploadAltSolid, BiCardImage } from "oh-vue-icons/icons";
 import type { App } from "vue"
 addIcons(
     CoSearch,
@@ -26,7 +26,8 @@ addIcons(
     BiChatDots,
     FaRegularStar,
     MdDeleteforeverOutlined,
-    LaCloudUploadAltSolid
+    LaCloudUploadAltSolid,
+    BiCardImage
 )
 
 export default {

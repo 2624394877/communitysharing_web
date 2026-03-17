@@ -75,6 +75,7 @@ const rebuildcontent = async(contentId: string, creatorId: string) => {
 /* ---------------- 获取数据 ---------------- */
 
 const getContentCountOnly = async (contentId: string) => {
+  count.contentId = contentId
   try {
     const res = await getcontentCount(contentId)
 
@@ -83,7 +84,6 @@ const getContentCountOnly = async (contentId: string) => {
       return
     }
 
-    count.contentId = res.data.contentId
     count.likeTotal = res.data.likeTotal
     count.collectTotal = res.data.collectTotal
     count.commentTotal = res.data.commentTotal
@@ -115,6 +115,8 @@ const getUserStatus = async (contentId: string) => {
 /* ---------------- 点赞 / 收藏 ---------------- */
 
 const tolike = async (contentId: string, type: LikeOrCollect) => {
+  console.log(contentId);
+    
   try {
     let res
     console.log(contentId);
@@ -213,7 +215,7 @@ const follow = (creatorId: string) => tofollowing(creatorId, followUnfollow.foll
 const unfollow = (creatorId: string) => tofollowing(creatorId, followUnfollow.unfollowing)
 
 const getfresh = async() => {
-  // console.log("刷新");
+  console.log("刷新");
   
   dialogVisible.value = false
   const contentId = props.detail?.id

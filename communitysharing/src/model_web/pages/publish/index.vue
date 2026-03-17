@@ -7,6 +7,7 @@ import { Publishes } from "@/core/network/service/content"
 import type { FileType } from "@/types/enum/enumType"
 import { fileType } from "@/types/enum"
 import { CloseBold } from '@element-plus/icons-vue'
+import { ElMessageBox } from 'element-plus'
 
 /* ---------------- 状态 ---------------- */
 
@@ -29,6 +30,14 @@ const uriMap: Record<FileType, UriKey | undefined> = {
     text: undefined,
     link: undefined
 }
+
+const dialogVisible = ref(false)
+const dialogVisibleImg = ref(false)
+const dialogImageUrl = ref('')
+const disabled = ref(false)
+const disabledCover = ref(false)
+
+const Imgfile = ref<UploadFile[]>()
 
 /* ---------------- 发布参数 ---------------- */
 
@@ -164,7 +173,7 @@ const upload = async (data: FormData) => {
         duration: 2500
       })
 
-      return
+      return null;
     }
 
     ElNotification.success({
@@ -181,6 +190,7 @@ const upload = async (data: FormData) => {
       message: "请重新上传",
       duration: 2500
     })
+    return null;
   }
 }
 
@@ -235,14 +245,56 @@ const calibration = async (
   appendUri(type, url)
 }
 
-// const comforem = new Promise((fail,success)=>{
-
-// });
+const confirm = async () => {
+  if(Imgfile.value?.length === 0) return true
+  const fileData = new FormData();
+  let raw;
+  if (Imgfile.value?.length === 1) raw = Imgfile.value[0]?.raw
+  if (raw === undefined) return false
+  fileData.append('file', raw!)
+  const url = await upload(fileData)
+  if (url === null) return false
+  console.log(url);
+  params.imgUris = []
+  params.imgUris.push(url)
+  return true
+} // promise封装小实验
 /* ---------------- 发布 ---------------- */
+const handleClose = (done: () => void) => {
+  ElMessageBox.confirm("确认关闭吗?",'warning',{
+    confirmButtonText: '关闭',
+    cancelButtonText: '取消',
+    type: 'warning',
+  })
+    .then(() => {
+      Imgfile.value?.pop()
+      done()
+    })
+    .catch(() => {
+      // catch error
+    })
+}
+
+const addChange = () => {
+  disabled.value = true
+  disabledCover.value = Imgfile.value?.length === 1? true:false
+}
+// 预览
+const handlePictureCardPreview = (file: UploadFile) => {
+  dialogImageUrl.value = file.url!
+  dialogVisibleImg.value = true
+}
+// 删除
+const handleRemove = (file: UploadFile) => {
+  console.log(file)
+  Imgfile.value?.pop()
+}
 
 const publish = async () => {
 
-  // 使用await等待promise弹出框确认
+  const ok = await confirm()
+
+  if(!ok) {notifyWarning("封面上传出错！");return}
 
   if (filetype.value !== fileType.text && filetype.value !== fileType.link) {
 
@@ -288,6 +340,29 @@ const publish = async () => {
 
 }
 
+const cancal = () => {
+  Imgfile.value?.pop()
+  dialogVisible.value = false
+}
+
+const ready = () => {
+  if(
+    params.content === '' && 
+    params.imgUris === null && 
+    params.fileUris === null &&
+    params.linkUris === null &&
+    params.videoUris === null &&
+    params.title === ''
+  ) {notifyWarning('发布的内容为空!');return}
+  publish()
+  dialogVisible.value = false
+}
+
+const sub = () => {
+  dialogVisible.value = true
+  if(navTab.value === 0) disabledCover.value = true
+  else disabledCover.value = false
+}
 /* ---------------- 初始化 ---------------- */
 
 onMounted(() => {
@@ -408,13 +483,52 @@ onMounted(() => {
                 </div>
 
                 <!-- 发布按钮 -->
-                <div class="submit" @click="publish">
-                    发布
+                <div class="submit" @click="sub">
+                    上传封面
                 </div>
 
             </el-scrollbar>
 
             <!-- 弹出框确认发布，同时包含为可选项的封面上传 -->
+            <el-dialog v-model="dialogVisible" title="封面上传" width="500" :before-close="handleClose">
+              <el-upload v-model:file-list="Imgfile" class="upload-cover" list-type="picture-card" :on-change="addChange" :auto-upload="false" :limit="1" :disabled="disabledCover">
+                <span class="cover-img">
+                  <v-icon name="bi-card-image" fill="#8DDDFF" scale="2" />
+                  <p>可选项(图片类型除外)</p>
+                </span>
+                <template #file="{ file }">
+                  <div>
+                    <img class="el-upload-list__item-thumbnail" :src="file.url" alt="" />
+                    <span class="el-upload-list__item-actions">
+                      <span
+                        class="el-upload-list__item-preview"
+                        @click="handlePictureCardPreview(file)"
+                      >
+                        预览
+                      </span>
+                      <span
+                        v-if="disabled"
+                        class="el-upload-list__item-delete"
+                        @click="handleRemove(file)"
+                      >
+                        删除
+                      </span>
+                    </span>
+                  </div>
+                </template>
+              </el-upload>
+              <el-dialog v-model="dialogVisibleImg" class="show-perv" style="width: 300px;height: 300px;display: flex;align-items: center;">
+                <img w-full :src="dialogImageUrl" alt="Preview Image" width="100%" height="100%" />
+              </el-dialog>
+              <template #footer>
+                <div class="dialog-footer">
+                  <el-button @click="cancal">取消</el-button>
+                  <el-button type="primary" @click="ready">
+                    发布
+                  </el-button>
+                </div>
+              </template>
+            </el-dialog>
         </div>
     </div>
 </template>
@@ -553,5 +667,21 @@ onMounted(() => {
 
 :deep(.el-textarea__inner) {
   resize: none;
+}
+
+/* 确认上传对话框 */
+.upload-cover :deep(.el-upload-list--picture-card) {
+  display: flex;
+  justify-content: center;
+  .cover-img {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    p {
+      font-size: small;
+      font-weight: bolder;
+      color: #909399;
+    }
+  }
 }
 </style>
