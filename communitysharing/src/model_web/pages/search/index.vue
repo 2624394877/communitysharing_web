@@ -1,16 +1,13 @@
 <script setup lang="ts">
-import { reactive, ref, watch } from "vue"
+import { reactive, ref } from "vue"
 import { searchType } from "@/model_web/pages/discover/usingData/index"
 import show from "@/model_web/pages/discover/show/index.vue"
-import { getSearchContentlist } from "@/core/network/service/content"
-import { ElNotification } from "element-plus"
 import type { ScrollbarDirection } from "element-plus"
 import mitter from "@/core/bus"
 import MessageTopic from "@/core/bus/consumer"
-import { useRoute } from "vue-router"
 import { conditionType } from "@/types/enum"
-import type {userData, searchUserParams} from "@/types/userServer/index"
-import { getSearchUserReq } from "@/core/network/service/user"
+import { useSearch } from "@/core/composables/page/search/useSearch"
+import { useSearchRoute } from "@/core/composables/page/search/useSearchRoute"
 
 // 滚动元素
 const scrollRef = ref<HTMLElement | null>(null)
@@ -18,39 +15,20 @@ const scrollRef = ref<HTMLElement | null>(null)
 // 当前搜索标签
 const searchTab = ref<number>(0)
 
-// 内容列表
-const contentList = ref<contentList[]>([])
-
-const userListData = ref<userData[]>([])
-// 分页
-const pageNo = ref(1)
-
-// 是否允许继续请求
-const hasMore = ref(true)
-
-// 是否请求中
-const loading = ref(false)
-
-// 是否为空
-const empty = ref(false)
-
-// 内容请求参数
-const reqParams = ref<searchParams>({
-    keyword: '',
-    pageNo: pageNo.value
-})
-
-const userReqParams = ref<searchUserParams>({
-    keyword: '',
-    pageNo: pageNo.value
-})
-
-const isUser = ref<boolean>(false)
-/* ------------------ 搜索内容列表参数 ------------------ */
-const route = useRoute()
-const searchText = ref<string | undefined>()
-
-/* ------------------ 横向拖拽滚动 ------------------ */
+const { contentList,
+    userListData,
+    pageNo,
+    hasMore,
+    loading,
+    empty,
+    isUser,
+    reqParams,
+    userReqParams,
+    searchText,
+    resetList,
+    // search,
+    searchUser,
+    doSearch } = useSearch()
 
 const drag = reactive({
   mouseDown: false,
@@ -74,19 +52,10 @@ const stopDrag = () => {
   drag.mouseDown = false
 }
 
-/* ------------------ 重置列表 ------------------ */
-
-const resetList = () => {
-  contentList.value = []
-  userListData.value = []
-  pageNo.value = 1
-  hasMore.value = true
-  reqParams.value.sort = null;
-  reqParams.value.timeRange == null
-  reqParams.value.type = null
-  isUser.value = false
-  mitter.emit(MessageTopic.EMPTY, false)
-  mitter.emit(MessageTopic.NOT_HAVE_DATA_MORE, false)
+const resetUIState = () => {
+    resetList()
+    mitter.emit(MessageTopic.EMPTY, false)
+    mitter.emit(MessageTopic.NOT_HAVE_DATA_MORE, false)
 }
 
 /* ------------------ 切换搜索模式 ------------------ */
@@ -102,7 +71,7 @@ const selectTab = (id: number,name: string, e: MouseEvent) => {
 
     searchTab.value = id
 
-    resetList()
+    resetUIState()
     switch(name) {
         case conditionType.type:
             reqParams.value.type = 0
@@ -123,107 +92,10 @@ const loadMore = (direction: ScrollbarDirection) => {
 
   pageNo.value++
 }
-
-/* ------------------ 内容搜索 ------------------ */
-const search = async (params: searchParams) => {
-    if (!hasMore.value || loading.value) return
-
-    loading.value = true
-
-    try {
-        const res = await getSearchContentlist(params)
-        // console.log(res);
-        
-        if (!res.success) {
-            ElNotification.error({
-                title: '错误',
-                message: res.message,
-                duration: 2000
-            })
-            return
-        }
-
-        const list = res.data || []
-
-        if (pageNo.value === 1 && list.length === 0) {
-            empty.value = true
-            return
-        }
-
-        empty.value = false
-        contentList.value.push(...list)
-
-        if (list.length < res.pageSize) {
-            hasMore.value = false
-        }
-
-    } catch (error:any) {
-        ElNotification.error({
-            title: "错误",
-            message: error?.message || "请求失败",
-            duration: 1000
-        })
-    } finally {
-        loading.value = false
-    }
-}
-
-/* ------------------ 用户搜索 ------------------ */
-const searchUser = async (params: searchUserParams) => {
-    if (!hasMore.value || loading.value) return
-
-    loading.value = true
-
-    try {
-        const res = await getSearchUserReq(params)
-        console.log(res);
-        
-        if (!res.success) {
-            ElNotification.error({
-                title: '错误',
-                message: res.message,
-                duration: 2000
-            })
-            return
-        }
-
-        const list = res.data || []
-
-        if (pageNo.value === 1 && list.length === 0) {
-            empty.value = true
-            return
-        }
-
-        empty.value = false
-        userListData.value.push(...list)
-
-        if (list.length < res.pageSize) {
-            hasMore.value = false
-        }
-
-    } catch (error:any) {
-        ElNotification.error({
-            title: "错误",
-            message: error?.message || "请求失败",
-            duration: 1000
-        })
-    } finally {
-        loading.value = false
-    }
-}
-
-/* ------------------ 触发搜索 ------------------ */
-const doSearch = (text: string) => {
-    searchText.value = text
-    reqParams.value.keyword = text
-    resetList()
-    search(reqParams.value)
-}
-
 /* ------------------ 条件搜索 ------------------ */
 const condition = (type: string,number: number) => {
     // 初始化参数
-    resetList();
+    resetUIState();
     // 匹配条件
     switch (type) {
         case conditionType.type:
@@ -250,22 +122,7 @@ const condition = (type: string,number: number) => {
     doSearch(searchText.value as string)
 }
 
-/* ------------------ 监听路由 ------------------ */
-watch(
-  () => route.query,
-  (newValue) => {
-    if (!newValue.text) {
-        ElNotification.warning({
-            title: "警告！",
-            message: "搜索内容为空",
-            duration: 1000
-        })
-        return;
-    }
-    doSearch(newValue.text as string)
-  },
-  { immediate: true }
-)
+useSearchRoute(doSearch)
 </script>
 
 <template>

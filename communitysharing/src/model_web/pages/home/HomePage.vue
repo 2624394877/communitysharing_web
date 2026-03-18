@@ -1,214 +1,37 @@
 <script setup lang="ts">
-import { ref, computed, watch, reactive, onBeforeMount, onMounted, onUnmounted } from 'vue'
 import SearchInput from '@/model_web/components/Search/SearchInput.vue';
 import LoginPage from '@/model_web/pages/profile/login/index.vue';
 import { ElNotification } from 'element-plus'
-import { OutLogin } from '@/core/network/service/auth'
 import { useAuthStore } from '@/store/auth';
-import { useRoute, useRouter } from 'vue-router'
-import { wsService } from '@/core/service/websocket';
+import { useRoute } from 'vue-router'
 import avator from '@/assets/resource/imges/avator.png'
-import mitter from '@/core/bus/index'
-import consumerMessageConstants from './model/dto/userDto';
 import { pushRouterActive } from '@/types/enum';
+import { useUser } from '@/core/composables/page/home/useUser';
+import { useAuthAction } from '@/core/composables/page/home/useAuth';
+import { useSidebar } from '@/core/composables/page/home/useSidebar';
+import { useUserEvent } from '@/core/composables/page/home/useEventBus';
 const route = useRoute();
-const router = useRouter();
 const auth = useAuthStore();
 
-/**
- * 用户信息
- */
-const userinfo = reactive<UserInfo>({
-    communitysharingId: '',
-    avatar: '',
-    nickname: '',
-    introduction: '',
-    deleted: false
-});
+const { userinfo,initUserInfo,getData } = useUser();
+const { dialogVisible,isLogin,toLogin,outLogin } = useAuthAction(initUserInfo);
+const { activeBtn,activebtnForHomeleft,initActiveBtn } = useSidebar()
 
-/**
- * 初始化用户信息
- */
-const initUserInfo = () => {
-    const localUser = JSON.parse(localStorage.getItem('userInfo') || '{}');
-
-    if (localUser?.communitysharingId) {
-        Object.assign(userinfo, {
-            communitysharingId: localUser.communitysharingId,
-            avatar: localUser.avatar ?? avator,
-            nickname: localUser.nickname,
-            introduction: localUser.introduction,
-            deleted: localUser.deleted
-        });
-    } else if (auth.userInfo) {
-        Object.assign(userinfo, {
-            communitysharingId: auth.userInfo.communitysharingId,
-            avatar: auth.userInfo.avatar ?? avator,
-            nickname: auth.userInfo.nickname,
-            introduction: auth.userInfo.introduction,
-            deleted: auth.userInfo.deleted
-        });
-    }
-};
-
-/**
- * 登录弹窗
- */
-const dialogVisible = ref(false);
-
-/**
- * dialog 动画
- */
-/* const dialogTransition = computed<DialogTransition>(() => ({
-    name: 'dialog-custom-object',
-    appear: true,
-    mode: 'out-in',
-    duration: 500
-})); */
-
-/**
- * 是否登录
- */
-const isLogin = computed(() => auth.isLogin);
-
-/**
- * 打开登录
- */
-const toLogin = () => {
-    dialogVisible.value = true;
-};
-
-/**
- * 退出登录
- */
-const outLogin = async () => {
-    try {
-        const res = await OutLogin();
-
-        if (!res.success) {
-            ElNotification.error({
-                title: "错误",
-                message: res.message,
-                offset: 100
-            });
-            return;
-        }
-
-        ElNotification.success({
-            title: "成功",
-            message: "登出成功",
-            offset: 100
-        });
-
-        auth.isLogin = false;
-        auth.userInfo = {} as UserInfo;
-
-        localStorage.removeItem("token");
-        localStorage.removeItem("userInfo");
-        sessionStorage.removeItem("userdetail");
-
-        wsService.close();
-
-        router.push("/");
-
-    } catch (error) {
-        console.error(error);
-    }
-};
-
-/**
- * 按钮激活
- */
-const activeBtn = ref<string>(pushRouterActive.discover);
-
-/**
- * 激活首页左侧活动按钮，并调转到对应路由
- * @param page 路由
- */    
-const activebtnForHomeleft = (page: string) => {
-    router.push(page)
-    activeBtn.value = page;
-    sessionStorage.setItem("actvieBtn", page);
-};
-
-/**
- * 登录状态监听
- */
-watch(
-    () => auth.isLogin,
-    (val) => {
-        dialogVisible.value = !val;
-
-        if (val) {
-            initUserInfo();
-        }
-    },
-    { immediate: true }
-);
-
-watch(
-    () => route.path,
-    (val) => {
-        if (val === pushRouterActive.discover) {
-            activeBtn.value = pushRouterActive.discover;
-        } else if (val === pushRouterActive.publish) {
-            activeBtn.value = pushRouterActive.publish;
-        }
-    }
-);
-
-/**
- * mitt 用户信息监听
- */
-const userInfoHandler = (data: UserInfo) => {
-    console.log("主页接收到消息：", data);
-
-    if (!data) return;
-
-    Object.assign(userinfo, data);
-};
-
-/**
- * 子组件数据接收
- */
-const getData = (data: UserInfo) => {
-    Object.assign(userinfo, data);
-};
-
-/**
- * 生命周期
- */
-onBeforeMount(() => {
-    initUserInfo();
-});
-
-onMounted(() => {
-    mitter.on(
-        consumerMessageConstants.GET_USER_INFO_TOPIC,
-        userInfoHandler
-    );
-    // 在页面挂载后，在应用存储中载入发现和发布的按钮状态
-    sessionStorage.getItem("actvieBtn")
-    if (sessionStorage.getItem("actvieBtn")) {
-        activeBtn.value = sessionStorage.getItem("actvieBtn") as string;
-    }
-});
-
-onUnmounted(() => {
-    mitter.off(
-        consumerMessageConstants.GET_USER_INFO_TOPIC,
-        userInfoHandler
-    );
-});
+useUserEvent((data) => {
+  Object.assign(userinfo, data)
+})
+initUserInfo()
+initActiveBtn()
 </script>
 
 <template>
     <div class="web_home">
-        <header>
+        <header> 
             <span class="label_theme">图标和主题</span>
             <span class="search">
                 <SearchInput></SearchInput>
             </span>
+            <span></span>
             <span class="label_nav">
                 <a @click="ElNotification.warning({title: '预留扩展', message: '尚未确定开发', offset: 100})" style="cursor: pointer;">扩展功能</a>
                 <router-link to="/Personal">个人中心</router-link>
